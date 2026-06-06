@@ -1,0 +1,11 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local test output
+/out/
+*.log
+
+# Composer: vendor/ IS committed so the plugin is upload-ready (matches the
+# deployment model). Do not ignore it.
