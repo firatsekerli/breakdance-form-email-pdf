@@ -31,7 +31,8 @@ class PdfBuilder
      */
     public function render(string $title, string $contentHtml, array $branding = []): string
     {
-        $html = $this->buildHtml($title, $contentHtml, $branding);
+        $b    = $this->resolveBranding($branding);
+        $html = $this->buildHtml($title, $contentHtml, $b);
 
         $mpdf = new Mpdf([
             'mode'          => 'utf-8',
@@ -39,7 +40,7 @@ class PdfBuilder
             'margin_left'   => 15,
             'margin_right'  => 15,
             'margin_top'    => 16,
-            'margin_bottom' => 16,
+            'margin_bottom' => 20,
             'tempDir'       => $this->tempDir(),
         ]);
 
@@ -47,12 +48,28 @@ class PdfBuilder
         $mpdf->SetCreator('Breakdance Form PDF');
         $mpdf->showImageErrors = false; // allow a remote logo to fail gracefully
 
+        // Footer pinned to the bottom margin of every page.
+        if ($b['footer'] !== '') {
+            $mpdf->SetHTMLFooter($this->footerHtml($b['footer']));
+        }
+
         $mpdf->WriteHTML($html);
 
         $path = $this->outputPath($title);
         $mpdf->Output($path, \Mpdf\Output\Destination::FILE);
 
         return $path;
+    }
+
+    /**
+     * Footer markup placed in the page's bottom margin (mPDF page footer).
+     */
+    private function footerHtml(string $footer): string
+    {
+        return '<div style="text-align:center;font-size:9px;color:#999;'
+            . 'border-top:1px solid #e2e6ea;padding-top:6px;">'
+            . htmlspecialchars($footer, ENT_QUOTES, 'UTF-8')
+            . '</div>';
     }
 
     /**
@@ -70,14 +87,20 @@ class PdfBuilder
     }
 
     /**
-     * Wrap the content in the branded HTML shell.
+     * Resolve branding values (logo, logo width, colour, footer) with filters
+     * and WordPress-site fallbacks.
+     *
+     * @return array{logo:string,logoWidth:int,brand:string,footer:string,siteName:string}
      */
-    private function buildHtml(string $title, string $contentHtml, array $branding): string
+    private function resolveBranding(array $branding): array
     {
         $siteName = function_exists('get_bloginfo') ? get_bloginfo('name') : '';
-        $siteUrl  = function_exists('home_url') ? home_url() : '';
 
-        $logo = apply_filters('bd_form_pdf_logo', $branding['logo'] ?? '');
+        $logo      = apply_filters('bd_form_pdf_logo', $branding['logo'] ?? '');
+        $logoWidth = (int) apply_filters('bd_form_pdf_logo_width', 200);
+        if ($logoWidth < 1) {
+            $logoWidth = 200;
+        }
 
         $brand = $branding['colour'] ?? '';
         $brand = $brand !== '' ? $brand : self::DEFAULT_BRAND;
@@ -85,8 +108,27 @@ class PdfBuilder
 
         $footer = $branding['footer'] ?? '';
         $footer = $footer !== '' ? $footer : $siteName;
-        $footer = apply_filters('bd_form_pdf_footer', $footer, $siteName);
+        $footer = (string) apply_filters('bd_form_pdf_footer', $footer, $siteName);
 
+        return [
+            'logo'      => (string) $logo,
+            'logoWidth' => $logoWidth,
+            'brand'     => (string) $brand,
+            'footer'    => $footer,
+            'siteName'  => (string) $siteName,
+        ];
+    }
+
+    /**
+     * Wrap the content in the branded HTML shell (header + body only; the
+     * footer is rendered separately as an mPDF page footer).
+     */
+    private function buildHtml(string $title, string $contentHtml, array $branding): string
+    {
+        $logo        = $branding['logo'];
+        $logoWidth   = $branding['logoWidth'];
+        $brand       = $branding['brand'];
+        $siteName    = $branding['siteName'];
         $generatedAt = function_exists('wp_date') ? wp_date('j F Y, g:i a') : date('j F Y, g:i a');
 
         $content = $contentHtml; // resolved + sanitised by the action layer
