@@ -7,6 +7,12 @@
  * Usage:  php test/render-sample.php  [output-dir]
  */
 
+// CLI-only: never executable over the web.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('This script can only be run from the command line.');
+}
+
 error_reporting(E_ALL & ~E_DEPRECATED);
 
 $root = dirname(__DIR__);

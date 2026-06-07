@@ -448,6 +448,12 @@ class SendPdf extends Action
 
     /**
      * Replace {field_id} tokens (and {all_fields}) with submitted values.
+     *
+     * When $allowHtml is true the output is HTML (PDF content / email body), so
+     * each submitted value is escaped with esc_html() to prevent HTML/email
+     * injection and mPDF remote/local-resource abuse. The admin-authored
+     * template markup itself is preserved. For plain-text contexts (subject,
+     * title, addresses) the value is left raw and escaped/sanitised at its sink.
      */
     public function renderData($form, $string, $allowHtml = false)
     {
@@ -463,6 +469,10 @@ class SendPdf extends Action
             }
             if (is_array($value)) {
                 $value = implode(', ', $value);
+            }
+            $value = (string) $value;
+            if ($allowHtml) {
+                $value = esc_html($value);
             }
             $string = str_replace('{' . $id . '}', $value, $string);
         }

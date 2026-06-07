@@ -62,6 +62,56 @@ class PdfBuilder
     }
 
     /**
+     * Convert the configured logo into an inline data URI via a controlled
+     * read/fetch, so mPDF never issues a request for an arbitrary URL or path.
+     *
+     * Combined with the escaped PDF content, this means mPDF makes no external
+     * (remote or local) resource requests at all — closing any SSRF / local
+     * file-read surface. Anything that can't be safely embedded yields '' (no
+     * logo) rather than a raw URL handed to mPDF.
+     */
+    private function embedLogo(string $logo): string
+    {
+        $logo = trim($logo);
+        if ($logo === '' || strncmp($logo, 'data:', 5) === 0) {
+            return $logo; // empty, or already an inline data URI
+        }
+
+        $data = null;
+        $mime = null;
+        $max  = 2 * 1024 * 1024; // 2 MB cap
+
+        if (@is_file($logo)) {
+            // Local file path.
+            $contents = @file_get_contents($logo, false, null, 0, $max + 1);
+            if ($contents !== false && $contents !== '' && strlen($contents) <= $max) {
+                $info = @getimagesizefromstring($contents);
+                if ($info && !empty($info['mime'])) {
+                    $data = $contents;
+                    $mime = $info['mime'];
+                }
+            }
+        } elseif (preg_match('#^https?://#i', $logo) && function_exists('wp_remote_get')) {
+            // Remote URL — fetch in a controlled way (timeout + size + type check).
+            $resp = wp_remote_get($logo, ['timeout' => 8, 'redirection' => 2]);
+            if (!is_wp_error($resp) && (int) wp_remote_retrieve_response_code($resp) === 200) {
+                $body  = (string) wp_remote_retrieve_body($resp);
+                $ctype = (string) wp_remote_retrieve_header($resp, 'content-type');
+                if ($body !== '' && strlen($body) <= $max && stripos($ctype, 'image/') === 0) {
+                    $data = $body;
+                    $mime = strtok($ctype, ';'); // drop any "; charset=..."
+                }
+            }
+        }
+
+        if ($data === null || $mime === null) {
+            return '';
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode($data);
+    }
+
+    /**
      * Footer markup placed in the page's bottom margin (mPDF page footer).
      */
     private function footerHtml(string $footer): string
@@ -97,6 +147,7 @@ class PdfBuilder
         $siteName = function_exists('get_bloginfo') ? get_bloginfo('name') : '';
 
         $logo      = apply_filters('bd_form_pdf_logo', $branding['logo'] ?? '');
+        $logo      = $this->embedLogo((string) $logo); // controlled fetch -> data URI (or '')
         $logoWidth = (int) apply_filters('bd_form_pdf_logo_width', 200);
         if ($logoWidth < 1) {
             $logoWidth = 200;
