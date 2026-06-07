@@ -117,8 +117,11 @@ the characters would otherwise render blank. To add a script:
 | Filter | Purpose |
 |--------|---------|
 | `bd_form_pdf_logo` | Override the PDF logo URL/path. |
+| `bd_form_pdf_logo_width` | Logo width in px (default 120). |
 | `bd_form_pdf_brand_colour` | Override the brand colour (hex). |
 | `bd_form_pdf_footer` | Override the footer text (`$footer, $siteName`). |
+| `bd_form_pdf_default_body` | Override the default email body used when the body field is blank. |
+| `bd_form_pdf_debug_log` | Return `true` to write a one-line send summary (recipient, subject, PDF, attachments) to the PHP error log for every submission. |
 
 Branding defaults to your WordPress site name/URL and the WordPress admin blue
 (`#2271b1`) when not set in the UI.

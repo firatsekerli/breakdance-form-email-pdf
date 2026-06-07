@@ -333,7 +333,8 @@ class SendPdf extends Action
         }
 
         // Attachments: the PDF (when generated), plus uploaded files when enabled.
-        $attachments = [];
+        $attachments   = [];
+        $uploadedCount = 0;
         if ($pdfPath !== null) {
             $attachments[] = $pdfPath;
         }
@@ -342,10 +343,13 @@ class SendPdf extends Action
                 foreach ((array) $fileGroup as $file) {
                     if (isset($file['file']) && @is_file($file['file'])) {
                         $attachments[] = $file['file'];
+                        $uploadedCount++;
                     }
                 }
             }
         }
+
+        $pdfName = $pdfPath !== null ? basename($pdfPath) : '(not generated)';
 
         $sent = wp_mail($toEmails, $subject, $body, $headers, $attachments);
 
@@ -353,25 +357,40 @@ class SendPdf extends Action
             $builder->cleanup($pdfPath);
         }
 
-        // Build an informative log entry (shown against the action in the
-        // submission record).
+        // Compose an informative summary of exactly what was sent. This is shown
+        // against the action in the submission record and (optionally) logged.
         $recipientList = implode(', ', $toEmails);
+        $status = !$sent
+            ? 'EMAIL FAILED to send'
+            : ($pdfFailed ? 'Email sent WITHOUT PDF (generation failed)' : 'PDF emailed successfully');
 
-        if (!$sent) {
-            return [
-                'type'    => 'error',
-                'message' => $pdfFailed
-                    ? "PDF generation failed AND the email to {$recipientList} could not be sent."
-                    : "PDF generated, but the email to {$recipientList} could not be sent.",
-            ];
+        $summaryLines = [
+            $status,
+            'To: ' . $recipientList,
+            'Subject: ' . $subject,
+            'PDF: ' . $pdfName,
+        ];
+        if ($cc !== '') {
+            $summaryLines[] = 'CC: ' . $cc;
+        }
+        if ($bcc !== '') {
+            $summaryLines[] = 'BCC: ' . $bcc;
+        }
+        if (!empty($email['attach_files'])) {
+            $summaryLines[] = 'Uploaded files attached: ' . $uploadedCount;
+        }
+        $summary = implode("\n", $summaryLines);
+
+        // Optional debug log (off by default) so admins can trace every send.
+        if (apply_filters('bd_form_pdf_debug_log', false)) {
+            error_log('[Breakdance Form PDF] ' . str_replace("\n", ' | ', $summary));
         }
 
-        return [
-            'type'    => 'success',
-            'message' => $pdfFailed
-                ? "Email sent to {$recipientList} WITHOUT the PDF (generation failed — see server logs)."
-                : "PDF emailed to {$recipientList}.",
-        ];
+        if (!$sent) {
+            return ['type' => 'error', 'message' => $summary];
+        }
+
+        return ['type' => 'success', 'message' => $summary];
     }
 
     /* --------------------------------------------------------------------- */
