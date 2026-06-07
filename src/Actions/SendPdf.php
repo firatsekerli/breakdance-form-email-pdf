@@ -306,9 +306,16 @@ class SendPdf extends Action
         $cc        = $this->sanitize($form, $email['cc'] ?? '');
         $bcc       = $this->sanitize($form, $email['bcc'] ?? '');
 
+        // The email body is configured in the UI ("Email Body (summary)").
+        // When left blank, fall back to a sensible default that can also be
+        // overridden with the `bd_form_pdf_default_body` filter.
+        $defaultBody = (string) apply_filters(
+            'bd_form_pdf_default_body',
+            '<p>A new form submission has been received. Full details are attached as a PDF.</p>'
+        );
         $bodyTpl = ($email['body_message'] ?? '') !== ''
             ? $email['body_message']
-            : '<p>A new form submission has been received. Full details are attached as a PDF.</p>';
+            : $defaultBody;
         $body = $this->renderData($form, $bodyTpl, true);
 
         $headers = [

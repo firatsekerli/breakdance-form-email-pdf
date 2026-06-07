@@ -148,9 +148,9 @@ class PdfBuilder
 
         $logo      = apply_filters('bd_form_pdf_logo', $branding['logo'] ?? '');
         $logo      = $this->embedLogo((string) $logo); // controlled fetch -> data URI (or '')
-        $logoWidth = (int) apply_filters('bd_form_pdf_logo_width', 200);
+        $logoWidth = (int) apply_filters('bd_form_pdf_logo_width', 120);
         if ($logoWidth < 1) {
-            $logoWidth = 200;
+            $logoWidth = 120;
         }
 
         $brand = $branding['colour'] ?? '';
