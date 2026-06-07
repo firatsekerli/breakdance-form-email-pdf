@@ -1,49 +1,73 @@
 # Cristal Breakdance Form PDF
 
-A small, **standalone** WordPress plugin that adds a **"Send PDF"** action to
-Breakdance forms.
+A proper WordPress plugin that adds a standalone **"Send PDF"** action to
+Breakdance forms — fully configured in the Breakdance UI, no hardcoded fields.
 
-When the contact form is submitted, this action:
+On submission it:
 
-1. Reads the submitted fields.
-2. Builds a **branded PDF** (mPDF) containing **only the fields relevant to the
-   selected _Request Reason_**.
-3. Emails it to a fixed recipient with a **short summary in the body** and the
-   **full details attached as a PDF**, plus **any uploaded files attached
-   alongside** it.
+1. Evaluates a set of **conditional rules** (each rule = a condition on a form
+   field) to choose **the recipient** and **the rich-text content** for the
+   document.
+2. Renders that content into a **branded PDF** (mPDF).
+3. Emails it with a **short summary in the body**, the **PDF attached**, and
+   **uploaded files attached alongside** (optional).
 
 It does **not** modify or replace the separate **"Conditional Email"** action
 (which comes from a different plugin). Add "Send PDF" alongside your existing
-_Actions After Submission_, and remove the duplicated field list from the
-Conditional Email body in the Breakdance UI yourself.
+_Actions After Submission_.
 
 ---
 
-## Request Reason → fields included
+## How it works (UI-driven)
 
-| Field | General Information | Service Call | Quotation |
-|-------|:---:|:---:|:---:|
-| Request Reason | ✓ | ✓ | ✓ |
-| Approximate Date of Installation | – | ✓ | – |
-| Contract Number | – | ✓ | – |
-| Full Name | ✓ | ✓ | ✓ |
-| Email | ✓ | ✓ | ✓ |
-| Alternative Email | ✓ | ✓ | ✓ |
-| Phone Number | ✓ | ✓ | ✓ |
-| Alternative Phone | ✓ | ✓ | ✓ |
-| House Number | ✓ | ✓ | ✓ |
-| Street | ✓ | ✓ | ✓ |
-| Town | ✓ | ✓ | ✓ |
-| County | ✓ | ✓ | ✓ |
-| Postcode | ✓ | ✓ | ✓ |
-| Subject | ✓ | ✓ | ✓ |
-| Message | ✓ | ✓ | ✓ |
+The action is built on the Breakdance Forms Action API — the same pattern used
+by the Phox "Conditional Email" plugin:
 
-Service Call and Quotation forms may include uploaded images — those files are
-attached to the email alongside the PDF.
+- Registered on `breakdance_loaded` (with version fallbacks).
+- `controls()` builds the Form Builder UI.
+- Field pickers and the `{ }` variable buttons populate from the form's own
+  fields (`content.form.fields`), so nothing is hardcoded.
+- `run($form, $settings, $extra)` resolves `{field_id}` tokens, renders the
+  PDF, and sends the email.
 
-The field ids, labels and ordering are defined in
-[`src/FieldConfig.php`](src/FieldConfig.php).
+### The controls
+
+**PDF Content & Recipient Rules**
+- **Rules** (repeater) — each rule has:
+  - **Field** / **Condition** / **Value** — when this rule matches
+    (e.g. `request_reason` *Equals* `Service Call Request`).
+  - **Send To** — recipient for this rule.
+  - **PDF Content** — rich text with the `{field}` variable picker (and an
+    `{all_fields}` token). This is what gets rendered into the PDF.
+  - First matching rule wins.
+- **Default Recipient** — used when no rule matches.
+- **Default PDF Content** — used when no rule matches.
+- **PDF Title** — heading at the top of the PDF (supports field variables).
+
+**Email Settings**
+- **Subject**, **From Email**, **From Name**, **Reply To**, **CC**, **BCC**
+  (all support field variables where relevant).
+- **Email Body (summary)** — short rich-text summary shown in the email body
+  (full detail lives in the attached PDF).
+- **Attach uploaded files** — also attach any files the visitor uploaded.
+
+### Replicating the three Request Reasons
+
+Add one rule per reason, each with `request_reason` *Equals* the reason and the
+matching PDF content. For example, for **Service Call Request** paste:
+
+```html
+<div style="font-size:18px;"><strong>Request Reason:</strong> {request_reason}</div>
+<div style="font-size:18px;"><strong>Approximate Date of Installation:</strong> {installation_date}</div>
+<div style="font-size:18px;"><strong>Contract Number:</strong> {contract_number}</div>
+<div style="font-size:18px;"><strong>Full Name:</strong> {FIRSTSURNAME}</div>
+<div style="font-size:18px;"><strong>Email:</strong> {email}</div>
+... etc ...
+```
+
+(Use the variable picker to insert the tokens instead of typing them.) Set the
+**Default PDF Content** to your General Information layout so unmatched
+submissions still produce a sensible PDF.
 
 ---
 
@@ -53,65 +77,26 @@ The field ids, labels and ordering are defined in
 composer install --no-dev
 ```
 
-Then upload the whole plugin folder (including `vendor/`) to
-`wp-content/plugins/` and activate it, **or** zip it and install via
-_Plugins → Add New → Upload_.
+Upload the whole plugin folder (including `vendor/`) to `wp-content/plugins/`
+and activate it, **or** zip it and install via _Plugins → Add New → Upload_.
 
-> Requires the mPDF library, installed via Composer into `vendor/`. If it is
-> missing, the plugin shows an admin notice and the action does nothing.
+> Requires mPDF (installed via Composer into `vendor/`). If it's missing the
+> plugin shows an admin notice and the action does nothing. If your server
+> already provides mPDF, this bundled copy does not conflict (Composer
+> autoloading is lazy and guarded by `class_exists`).
 
-### Add the action to your form
-
-In the Breakdance Form Builder, open **Actions After Submission** and add
-**Send PDF** (alongside your existing actions). No further per-form
-configuration is required.
-
----
-
-## Configuration
-
-### Recipient (required)
-
-Set the fixed recipient address. In order of precedence:
-
-1. Constant in `wp-config.php`:
-   ```php
-   define( 'CRISTAL_BD_PDF_RECIPIENT', 'enquiries@cristalwindows.co.uk' );
-   ```
-2. Filter:
-   ```php
-   add_filter( 'cristal_bd_pdf_recipient', fn() => 'enquiries@cristalwindows.co.uk' );
-   ```
-3. Fallback: the site admin email (`admin_email`).
-
-### Other filters
-
-| Filter | Purpose |
-|--------|---------|
-| `cristal_bd_pdf_recipient` | The "To" address. |
-| `cristal_bd_pdf_subject` | Email subject (`$subject, $reason, $fields`). |
-| `cristal_bd_pdf_summary_body` | HTML summary body (`$html, $reason, $fields`). |
-| `cristal_bd_pdf_headers` | Email headers array (`$headers, $fields`). |
-| `cristal_bd_pdf_email` | Full email context array before sending. |
-| `cristal_bd_pdf_logo` | Logo URL or local path used in the PDF. |
-| `cristal_bd_pdf_brand_colour` | Primary brand colour (hex). |
-| `cristal_bd_pdf_strict_errors` | If `true`, surface PDF/email failures to Breakdance instead of logging silently. |
-
-By default, an internal PDF/email failure is **logged** (via `error_log`) and
-the visitor still sees a successful submission — so an internal hiccup never
-blocks the form. Set `cristal_bd_pdf_strict_errors` to `true` to change that.
-
-The Reply-To header is automatically set to the submitter's name and email so
-replies go straight back to the customer.
+Then, in the Form Builder, open **Actions After Submission** → add **Send PDF**,
+and configure the rules and email settings.
 
 ---
 
 ## Branding
 
-The PDF mirrors the look of the existing `quotation-form` plugin: Cristal blue
-(`#1a5490`), Arial, the company logo, and a contact strip. The logo is loaded
-from the live site URL by default; override it with the `cristal_bd_pdf_logo`
-filter (a local file path also works and avoids a runtime fetch).
+The PDF shell mirrors the existing `quotation-form` plugin: Cristal blue
+(`#1a5490`), Arial, the company logo, and a contact strip. The logo loads from
+the live site URL by default; override it with the `cristal_bd_pdf_logo` filter
+(a local file path also works). Override the colour with
+`cristal_bd_pdf_brand_colour`.
 
 The template lives in [`templates/pdf.php`](templates/pdf.php).
 
@@ -119,7 +104,7 @@ The template lives in [`templates/pdf.php`](templates/pdf.php).
 
 ## Development / testing
 
-Render sample PDFs for all three reasons without a WordPress install:
+Render sample PDFs without a WordPress install:
 
 ```bash
 composer install
@@ -127,4 +112,18 @@ php test/render-sample.php           # writes to a temp folder
 php test/render-sample.php ./out     # or a folder of your choosing
 ```
 
-The harness stubs the few WordPress functions the PDF code uses.
+The harness stubs the few WordPress functions the PDF code uses and feeds in
+sample rendered content.
+
+---
+
+## File structure
+
+```
+cristal-breakdance-pdf.php   Plugin bootstrap + registration (breakdance_loaded)
+src/Actions/SendPdf.php      The Send PDF action: controls() + run() + rule logic
+src/PdfBuilder.php           mPDF rendering + branded shell
+templates/pdf.php            Branded PDF HTML/CSS
+test/render-sample.php       Standalone PDF render harness
+vendor/                      Composer dependencies (mPDF) — committed, upload-ready
+```
