@@ -228,12 +228,35 @@ class PdfBuilder
 
     /**
      * Recipient-facing attachment filename derived from the document title.
+     *
+     * Unicode is preserved so all languages (Turkish, Arabic, Chinese, …) are
+     * supported. Only characters that are actually illegal in file names are
+     * removed: the Windows/Unix reserved set and control characters.
      */
     public static function attachmentFilename(string $title): string
     {
-        $title = trim($title) !== '' ? trim($title) : 'Form Submission';
-        $title = preg_replace('/[^A-Za-z0-9 \-]/', '', $title) ?? $title;
-        $title = trim($title) !== '' ? trim($title) : 'Form Submission';
+        $title = trim($title);
+        if ($title === '') {
+            $title = 'Form Submission';
+        }
+
+        // Strip filesystem-reserved characters and control chars, keep Unicode.
+        $clean = preg_replace('#[\\\\/:*?"<>|\x00-\x1F]#u', '', $title);
+        if (is_string($clean)) {
+            $title = $clean;
+        }
+
+        // Collapse whitespace and trim leading/trailing spaces and dots.
+        $collapsed = preg_replace('/\s+/u', ' ', $title);
+        if (is_string($collapsed)) {
+            $title = $collapsed;
+        }
+        $title = trim($title, " .\t\n\r\0\x0B");
+
+        if ($title === '') {
+            $title = 'Form Submission';
+        }
+
         return $title . ' - ' . date('Y-m-d') . '.pdf';
     }
 }
