@@ -76,12 +76,12 @@ Content**:
 
 ## Installation
 
-```bash
-composer install --no-dev
-```
-
 Upload the whole plugin folder (including `vendor/`) to `wp-content/plugins/`
 and activate it, **or** zip it and install via _Plugins → Add New → Upload_.
+
+No Composer step is required — `vendor/` (mPDF) is bundled. You only need
+`composer install --no-dev` if you're building from source and `vendor/` is not
+present.
 
 > Requires mPDF (installed via Composer into `vendor/`). If it's missing the
 > plugin shows an admin notice and the action does nothing. If your server
@@ -113,13 +113,16 @@ The template lives in [`templates/pdf.php`](templates/pdf.php).
 Render sample PDFs without a WordPress install:
 
 ```bash
-composer install
 php test/render-sample.php           # writes to a temp folder
 php test/render-sample.php ./out     # or a folder of your choosing
 ```
 
 The harness stubs the few WordPress functions the PDF code uses and feeds in
 sample rendered content.
+
+> `vendor/` (mPDF) is bundled, so **no Composer step is needed** to run this or
+> to use the plugin. Only run `composer install` if you're building from source
+> without `vendor/`, or `composer update mpdf/mpdf` to upgrade mPDF.
 
 ---
 
