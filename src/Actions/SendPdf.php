@@ -284,13 +284,16 @@ class SendPdf extends Action
             'footer' => $this->sanitize($form, $appearance['footer_text'] ?? ''),
         ];
 
-        // Build the PDF.
+        // Build the PDF. If generation fails, don't lose the notification —
+        // send the email without the attachment and report it instead.
+        $builder   = new PdfBuilder();
+        $pdfPath   = null;
+        $pdfFailed = false;
         try {
-            $builder = new PdfBuilder();
             $pdfPath = $builder->render($title, $contentHtml, $branding);
         } catch (\Throwable $e) {
-            error_log('[Breakdance Form PDF] PDF generation failed: ' . $e->getMessage());
-            return ['type' => 'error', 'message' => 'Could not generate the PDF.'];
+            $pdfFailed = true;
+            error_log('[Breakdance Form PDF] PDF generation failed; sending email without attachment: ' . $e->getMessage());
         }
 
         // Email settings.
@@ -322,8 +325,11 @@ class SendPdf extends Action
             $headers[] = "Bcc: {$bcc}";
         }
 
-        // Attachments: the PDF, plus uploaded files when enabled.
-        $attachments = [$pdfPath];
+        // Attachments: the PDF (when generated), plus uploaded files when enabled.
+        $attachments = [];
+        if ($pdfPath !== null) {
+            $attachments[] = $pdfPath;
+        }
         if (!empty($email['attach_files']) && !empty($extra['files'])) {
             foreach ($extra['files'] as $fileGroup) {
                 foreach ((array) $fileGroup as $file) {
@@ -336,13 +342,29 @@ class SendPdf extends Action
 
         $sent = wp_mail($toEmails, $subject, $body, $headers, $attachments);
 
-        $builder->cleanup($pdfPath);
-
-        if (!$sent) {
-            return ['type' => 'error', 'message' => 'Failed to send the PDF email.'];
+        if ($pdfPath !== null) {
+            $builder->cleanup($pdfPath);
         }
 
-        return ['type' => 'success'];
+        // Build an informative log entry (shown against the action in the
+        // submission record).
+        $recipientList = implode(', ', $toEmails);
+
+        if (!$sent) {
+            return [
+                'type'    => 'error',
+                'message' => $pdfFailed
+                    ? "PDF generation failed AND the email to {$recipientList} could not be sent."
+                    : "PDF generated, but the email to {$recipientList} could not be sent.",
+            ];
+        }
+
+        return [
+            'type'    => 'success',
+            'message' => $pdfFailed
+                ? "Email sent to {$recipientList} WITHOUT the PDF (generation failed — see server logs)."
+                : "PDF emailed to {$recipientList}.",
+        ];
     }
 
     /* --------------------------------------------------------------------- */
