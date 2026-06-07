@@ -93,6 +93,25 @@ and configure the rules, email settings, and appearance.
 
 ---
 
+## Size & fonts
+
+mPDF ships ~88 MB of fonts covering every script. To keep the plugin small,
+the bundled font set is **pruned to the DejaVu family** (~17 MB total), which
+covers **Latin, Turkish, Cyrillic, Greek and Western/Central European** text —
+the common case for form submissions.
+
+If you need PDF **content** in another script (CJK, Arabic, Hebrew, Thai, …),
+the characters would otherwise render blank. To add a script:
+
+1. Run `composer install` (this restores mPDF's full font set), **or** drop the
+   specific `.ttf`/`.otf` into `vendor/mpdf/mpdf/ttfonts/`.
+2. Reference it from your PDF CSS via `font-family` so mPDF embeds it.
+
+> `composer install` / `composer update` restores **all** fonts (~95 MB). Re-run
+> `bin/prune-fonts.sh` afterwards to shrink back down to the DejaVu family.
+
+---
+
 ## Filters
 
 | Filter | Purpose |
