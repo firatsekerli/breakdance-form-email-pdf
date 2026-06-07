@@ -6,7 +6,8 @@
  * Version:           2.0.0
  * Requires PHP:      7.4
  * Requires Plugins:  breakdance
- * Author:            Breakdance Form PDF
+ * Author:            asparagents
+ * Author URI:        https://asparagents.com/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       breakdance-form-pdf
@@ -65,9 +66,31 @@ add_action('breakdance_loaded', function () {
 }, 50);
 
 /**
+ * Admin notice if Breakdance (with its Forms API) is not active.
+ *
+ * Runs on `admin_notices` (after plugins have loaded), so if the base Forms
+ * Action class is still missing, Breakdance is not active and the "Send PDF"
+ * action cannot be registered.
+ */
+add_action('admin_notices', function () {
+    if (!current_user_can('activate_plugins')) {
+        return;
+    }
+    if (class_exists('\\Breakdance\\Forms\\Actions\\Action')) {
+        return;
+    }
+    echo '<div class="notice notice-warning"><p><strong>Breakdance Form PDF:</strong> '
+        . 'this plugin requires the <strong>Breakdance</strong> plugin (with Forms) to be installed '
+        . 'and active. The "Send PDF" form action will not appear until Breakdance is active.</p></div>';
+});
+
+/**
  * Admin notice if the mPDF dependency is missing (composer install not run).
  */
 add_action('admin_notices', function () {
+    if (!current_user_can('activate_plugins')) {
+        return;
+    }
     if (class_exists('\\Mpdf\\Mpdf')) {
         return;
     }
