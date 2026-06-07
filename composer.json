@@ -1,6 +1,6 @@
 {
-    "name": "cristalwindows/breakdance-form-pdf",
-    "description": "Standalone Breakdance form action that emails submissions as a branded PDF (Cristal Windows contact form).",
+    "name": "breakdance-form-pdf/breakdance-form-pdf",
+    "description": "Standalone Breakdance form action that emails form submissions as a branded PDF.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {
@@ -9,7 +9,7 @@
     },
     "autoload": {
         "psr-4": {
-            "CristalWindows\\BreakdanceFormPdf\\": "src/"
+            "BreakdanceFormPdf\\": "src/"
         }
     },
     "config": {

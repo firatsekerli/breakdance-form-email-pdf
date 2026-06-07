@@ -1,6 +1,6 @@
 <?php
 
-namespace CristalWindows\BreakdanceFormPdf;
+namespace BreakdanceFormPdf;
 
 use Mpdf\Mpdf;
 
@@ -11,29 +11,27 @@ if (!defined('ABSPATH')) {
 /**
  * Wraps rendered content HTML in a branded shell and produces a PDF (mPDF).
  *
- * Branding (colours, logo, contact strip) mirrors the existing Cristal
- * "quotation-form" plugin so the look is consistent across documents.
+ * Branding is fully configurable (logo, colour, footer) and otherwise falls
+ * back to the WordPress site name/URL — no values are hardcoded.
  */
 class PdfBuilder
 {
-    /** Primary brand colour (Cristal blue). */
-    const BRAND_PRIMARY = '#1a5490';
-
-    /** Default (live) logo URL, overridable via the `cristal_bd_pdf_logo` filter. */
-    const DEFAULT_LOGO = 'https://cristalwindows.co.uk/wp-content/uploads/2025/02/Cristal-Windows-LOGO-01.png';
+    /** Neutral default brand colour (WordPress admin blue). */
+    const DEFAULT_BRAND = '#2271b1';
 
     /**
      * Render a PDF for the given title + content HTML and return its file path.
      *
      * @param string $title       Heading shown at the top of the document.
      * @param string $contentHtml Already-rendered inner HTML (field tokens resolved).
+     * @param array  $branding    Optional: 'logo', 'colour', 'footer'.
      * @return string Absolute path to the written PDF file.
      *
      * @throws \Mpdf\MpdfException When PDF generation fails.
      */
-    public function render(string $title, string $contentHtml): string
+    public function render(string $title, string $contentHtml, array $branding = []): string
     {
-        $html = $this->buildHtml($title, $contentHtml);
+        $html = $this->buildHtml($title, $contentHtml, $branding);
 
         $mpdf = new Mpdf([
             'mode'          => 'utf-8',
@@ -45,9 +43,9 @@ class PdfBuilder
             'tempDir'       => $this->tempDir(),
         ]);
 
-        $mpdf->SetTitle($title !== '' ? $title : 'Contact Form Submission');
-        $mpdf->SetCreator('Cristal Windows Contact Form');
-        $mpdf->showImageErrors = false; // allow the remote logo to fail gracefully
+        $mpdf->SetTitle($title !== '' ? $title : 'Form Submission');
+        $mpdf->SetCreator('Breakdance Form PDF');
+        $mpdf->showImageErrors = false; // allow a remote logo to fail gracefully
 
         $mpdf->WriteHTML($html);
 
@@ -66,7 +64,7 @@ class PdfBuilder
             @unlink($path);
         }
         $dir = dirname($path);
-        if (is_dir($dir) && strpos(basename($dir), 'cristal-pdf-') === 0) {
+        if (is_dir($dir) && strpos(basename($dir), 'bd-form-pdf-') === 0) {
             @rmdir($dir);
         }
     }
@@ -74,16 +72,27 @@ class PdfBuilder
     /**
      * Wrap the content in the branded HTML shell.
      */
-    private function buildHtml(string $title, string $contentHtml): string
+    private function buildHtml(string $title, string $contentHtml, array $branding): string
     {
-        $logo        = apply_filters('cristal_bd_pdf_logo', self::DEFAULT_LOGO);
-        $brand       = apply_filters('cristal_bd_pdf_brand_colour', self::BRAND_PRIMARY);
+        $siteName = function_exists('get_bloginfo') ? get_bloginfo('name') : '';
+        $siteUrl  = function_exists('home_url') ? home_url() : '';
+
+        $logo = apply_filters('bd_form_pdf_logo', $branding['logo'] ?? '');
+
+        $brand = $branding['colour'] ?? '';
+        $brand = $brand !== '' ? $brand : self::DEFAULT_BRAND;
+        $brand = apply_filters('bd_form_pdf_brand_colour', $brand);
+
+        $footer = $branding['footer'] ?? '';
+        $footer = $footer !== '' ? $footer : $siteName;
+        $footer = apply_filters('bd_form_pdf_footer', $footer, $siteName);
+
         $generatedAt = function_exists('wp_date') ? wp_date('j F Y, g:i a') : date('j F Y, g:i a');
 
         $content = $contentHtml; // resolved + sanitised by the action layer
 
         ob_start();
-        include CRISTAL_BD_PDF_DIR . 'templates/pdf.php';
+        include BD_FORM_PDF_DIR . 'templates/pdf.php';
         return (string) ob_get_clean();
     }
 
@@ -93,7 +102,7 @@ class PdfBuilder
     private function tempDir(): string
     {
         $base = function_exists('get_temp_dir') ? get_temp_dir() : sys_get_temp_dir();
-        $dir  = rtrim($base, '/\\') . '/mpdf-cristal';
+        $dir  = rtrim($base, '/\\') . '/mpdf-bd-form-pdf';
         if (!is_dir($dir)) {
             if (function_exists('wp_mkdir_p')) {
                 wp_mkdir_p($dir);
@@ -114,7 +123,7 @@ class PdfBuilder
     private function outputPath(string $title): string
     {
         $base   = function_exists('get_temp_dir') ? get_temp_dir() : sys_get_temp_dir();
-        $unique = 'cristal-pdf-' . date('Ymd-His') . '-' . substr(md5(uniqid('', true)), 0, 8);
+        $unique = 'bd-form-pdf-' . date('Ymd-His') . '-' . substr(md5(uniqid('', true)), 0, 8);
         $dir    = rtrim($base, '/\\') . '/' . $unique;
         if (function_exists('wp_mkdir_p')) {
             wp_mkdir_p($dir);
@@ -125,13 +134,13 @@ class PdfBuilder
     }
 
     /**
-     * Customer-facing attachment filename derived from the document title.
+     * Recipient-facing attachment filename derived from the document title.
      */
     public static function attachmentFilename(string $title): string
     {
-        $title = trim($title) !== '' ? trim($title) : 'Contact Form';
+        $title = trim($title) !== '' ? trim($title) : 'Form Submission';
         $title = preg_replace('/[^A-Za-z0-9 \-]/', '', $title) ?? $title;
-        $title = trim($title) !== '' ? trim($title) : 'Contact Form';
+        $title = trim($title) !== '' ? trim($title) : 'Form Submission';
         return $title . ' - ' . date('Y-m-d') . '.pdf';
     }
 }

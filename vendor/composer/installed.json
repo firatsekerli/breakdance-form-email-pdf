@@ -484,6 +484,6 @@
             "install-path": "../setasign/fpdi"
         }
     ],
-    "dev": false,
+    "dev": true,
     "dev-package-names": []
 }

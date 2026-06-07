@@ -1,7 +1,8 @@
-# Cristal Breakdance Form PDF
+# Breakdance Form PDF
 
-A proper WordPress plugin that adds a standalone **"Send PDF"** action to
-Breakdance forms — fully configured in the Breakdance UI, no hardcoded fields.
+A WordPress plugin that adds a standalone **"Send PDF"** action to Breakdance
+forms — fully configured in the Breakdance UI, with no hardcoded fields or
+branding.
 
 On submission it:
 
@@ -12,16 +13,15 @@ On submission it:
 3. Emails it with a **short summary in the body**, the **PDF attached**, and
    **uploaded files attached alongside** (optional).
 
-It does **not** modify or replace the separate **"Conditional Email"** action
-(which comes from a different plugin). Add "Send PDF" alongside your existing
-_Actions After Submission_.
+It is standalone and does **not** modify or replace any other email/notification
+action you may have. Add "Send PDF" alongside your existing _Actions After
+Submission_.
 
 ---
 
 ## How it works (UI-driven)
 
-The action is built on the Breakdance Forms Action API — the same pattern used
-by the Phox "Conditional Email" plugin:
+The action is built on the Breakdance Forms Action API:
 
 - Registered on `breakdance_loaded` (with version fallbacks).
 - `controls()` builds the Form Builder UI.
@@ -51,23 +51,26 @@ by the Phox "Conditional Email" plugin:
   (full detail lives in the attached PDF).
 - **Attach uploaded files** — also attach any files the visitor uploaded.
 
-### Replicating the three Request Reasons
+**PDF Appearance**
+- **Logo URL** — optional logo in the PDF header (blank → the site name is shown).
+- **Brand Colour** — hex colour for the header rule and title.
+- **Footer Text** — optional footer line (blank → the site name is used).
 
-Add one rule per reason, each with `request_reason` *Equals* the reason and the
-matching PDF content. For example, for **Service Call Request** paste:
+### Per-condition content
+
+Add one rule per condition, each with the field/condition/value that should
+match and the matching PDF content. For example, paste into a rule's **PDF
+Content**:
 
 ```html
 <div style="font-size:18px;"><strong>Request Reason:</strong> {request_reason}</div>
-<div style="font-size:18px;"><strong>Approximate Date of Installation:</strong> {installation_date}</div>
-<div style="font-size:18px;"><strong>Contract Number:</strong> {contract_number}</div>
-<div style="font-size:18px;"><strong>Full Name:</strong> {FIRSTSURNAME}</div>
+<div style="font-size:18px;"><strong>Full Name:</strong> {full_name}</div>
 <div style="font-size:18px;"><strong>Email:</strong> {email}</div>
 ... etc ...
 ```
 
-(Use the variable picker to insert the tokens instead of typing them.) Set the
-**Default PDF Content** to your General Information layout so unmatched
-submissions still produce a sensible PDF.
+(Use the variable picker to insert tokens instead of typing them.) Set the
+**Default PDF Content** so unmatched submissions still produce a sensible PDF.
 
 ---
 
@@ -86,17 +89,20 @@ and activate it, **or** zip it and install via _Plugins → Add New → Upload_.
 > autoloading is lazy and guarded by `class_exists`).
 
 Then, in the Form Builder, open **Actions After Submission** → add **Send PDF**,
-and configure the rules and email settings.
+and configure the rules, email settings, and appearance.
 
 ---
 
-## Branding
+## Filters
 
-The PDF shell mirrors the existing `quotation-form` plugin: Cristal blue
-(`#1a5490`), Arial, the company logo, and a contact strip. The logo loads from
-the live site URL by default; override it with the `cristal_bd_pdf_logo` filter
-(a local file path also works). Override the colour with
-`cristal_bd_pdf_brand_colour`.
+| Filter | Purpose |
+|--------|---------|
+| `bd_form_pdf_logo` | Override the PDF logo URL/path. |
+| `bd_form_pdf_brand_colour` | Override the brand colour (hex). |
+| `bd_form_pdf_footer` | Override the footer text (`$footer, $siteName`). |
+
+Branding defaults to your WordPress site name/URL and the WordPress admin blue
+(`#2271b1`) when not set in the UI.
 
 The template lives in [`templates/pdf.php`](templates/pdf.php).
 
@@ -120,7 +126,7 @@ sample rendered content.
 ## File structure
 
 ```
-cristal-breakdance-pdf.php   Plugin bootstrap + registration (breakdance_loaded)
+breakdance-form-pdf.php      Plugin bootstrap + registration (breakdance_loaded)
 src/Actions/SendPdf.php      The Send PDF action: controls() + run() + rule logic
 src/PdfBuilder.php           mPDF rendering + branded shell
 templates/pdf.php            Branded PDF HTML/CSS

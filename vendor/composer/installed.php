@@ -1,19 +1,19 @@
 <?php return array(
     'root' => array(
-        'name' => 'cristalwindows/breakdance-form-pdf',
+        'name' => 'breakdance-form-pdf/breakdance-form-pdf',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '93d01e5d55584890d28d893c5370e4f0171ddc56',
+        'reference' => '7252ca4ee58b1e8ff9c73125e19dfadd0765784f',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'dev' => false,
+        'dev' => true,
     ),
     'versions' => array(
-        'cristalwindows/breakdance-form-pdf' => array(
+        'breakdance-form-pdf/breakdance-form-pdf' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '93d01e5d55584890d28d893c5370e4f0171ddc56',
+            'reference' => '7252ca4ee58b1e8ff9c73125e19dfadd0765784f',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

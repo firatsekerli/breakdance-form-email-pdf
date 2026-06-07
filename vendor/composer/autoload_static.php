@@ -31,9 +31,9 @@ class ComposerStaticInit089ffb87b0f5569c998ab4b399091835
         array (
             'DeepCopy\\' => 9,
         ),
-        'C' => 
+        'B' => 
         array (
-            'CristalWindows\\BreakdanceFormPdf\\' => 33,
+            'BreakdanceFormPdf\\' => 18,
         ),
     );
 
@@ -66,7 +66,7 @@ class ComposerStaticInit089ffb87b0f5569c998ab4b399091835
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
         ),
-        'CristalWindows\\BreakdanceFormPdf\\' => 
+        'BreakdanceFormPdf\\' => 
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),

@@ -16,14 +16,20 @@ require $root . '/vendor/autoload.php';
 if (!defined('ABSPATH')) {
     define('ABSPATH', $root . '/');
 }
-if (!defined('CRISTAL_BD_PDF_DIR')) {
-    define('CRISTAL_BD_PDF_DIR', $root . '/');
+if (!defined('BD_FORM_PDF_DIR')) {
+    define('BD_FORM_PDF_DIR', $root . '/');
 }
 if (!function_exists('apply_filters')) {
     function apply_filters($tag, $value, ...$args) { return $value; }
 }
 if (!function_exists('wp_date')) {
     function wp_date($format) { return date($format); }
+}
+if (!function_exists('get_bloginfo')) {
+    function get_bloginfo($key = 'name') { return 'Example Site'; }
+}
+if (!function_exists('home_url')) {
+    function home_url() { return 'https://example.com'; }
 }
 if (!function_exists('get_temp_dir')) {
     function get_temp_dir() { return rtrim(sys_get_temp_dir(), '/\\') . '/'; }
@@ -34,39 +40,42 @@ if (!function_exists('wp_mkdir_p')) {
 
 require $root . '/src/PdfBuilder.php';
 
-use CristalWindows\BreakdanceFormPdf\PdfBuilder;
+use BreakdanceFormPdf\PdfBuilder;
 
 // --- Sample rendered content (what the action produces after token replace) -
 $samples = [
-    'Service Call Request' => <<<HTML
-<div style="font-size:18px;"><strong>Request Reason:</strong> Service Call Request</div>
-<div style="font-size:18px;"><strong>Approximate Date of Installation:</strong> 18 March 2024</div>
-<div style="font-size:18px;"><strong>Contract Number:</strong> CN-20481</div>
-<div style="font-size:18px;"><strong>Full Name:</strong> Jane Hartley</div>
-<div style="font-size:18px;"><strong>Email:</strong> jane.hartley@example.com</div>
-<div style="font-size:18px;"><strong>Phone Number:</strong> 07700 900123</div>
-<div style="font-size:18px;"><strong>Postcode:</strong> GU14 6AA</div>
+    'Service Request' => <<<HTML
+<div style="font-size:18px;"><strong>Request Reason:</strong> Service Request</div>
+<div style="font-size:18px;"><strong>Full Name:</strong> Jane Doe</div>
+<div style="font-size:18px;"><strong>Email:</strong> jane.doe@example.com</div>
+<div style="font-size:18px;"><strong>Phone Number:</strong> 555 0123</div>
 <div style="font-size:18px;"><strong>Message:</strong> The handle on the rear door has come loose.</div>
 HTML,
     'Quotation Request' => <<<HTML
 <div style="font-size:18px;"><strong>Request Reason:</strong> Quotation Request</div>
-<div style="font-size:18px;"><strong>Full Name:</strong> Jane Hartley</div>
-<div style="font-size:18px;"><strong>Email:</strong> jane.hartley@example.com</div>
-<div style="font-size:18px;"><strong>Phone Number:</strong> 07700 900123</div>
-<div style="font-size:18px;"><strong>Postcode:</strong> GU14 6AA</div>
-<div style="font-size:18px;"><strong>Message:</strong> I'd like a quote for a replacement bay window.</div>
+<div style="font-size:18px;"><strong>Full Name:</strong> Jane Doe</div>
+<div style="font-size:18px;"><strong>Email:</strong> jane.doe@example.com</div>
+<div style="font-size:18px;"><strong>Phone Number:</strong> 555 0123</div>
+<div style="font-size:18px;"><strong>Message:</strong> I'd like a quote for a replacement window.</div>
 HTML,
 ];
 
-$outDir = $argv[1] ?? (rtrim(sys_get_temp_dir(), '/\\') . '/cristal-pdf-samples');
+$outDir = $argv[1] ?? (rtrim(sys_get_temp_dir(), '/\\') . '/bd-form-pdf-samples');
 if (!is_dir($outDir)) {
     mkdir($outDir, 0775, true);
 }
 
 $builder = new PdfBuilder();
 
+// Optional branding (as it would come from the UI's "PDF Appearance" section).
+$branding = [
+    'logo'   => '',           // no logo -> site name shown instead
+    'colour' => '#2271b1',
+    'footer' => 'Example Site',
+];
+
 foreach ($samples as $title => $content) {
-    $path = $builder->render($title, $content);
+    $path = $builder->render($title, $content, $branding);
 
     $dest = $outDir . '/' . basename($path);
     rename($path, $dest);

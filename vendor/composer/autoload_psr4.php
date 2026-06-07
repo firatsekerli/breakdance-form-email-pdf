@@ -13,5 +13,5 @@ return array(
     'Mpdf\\PsrHttpMessageShim\\' => array($vendorDir . '/mpdf/psr-http-message-shim/src'),
     'Mpdf\\' => array($vendorDir . '/mpdf/mpdf/src'),
     'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
-    'CristalWindows\\BreakdanceFormPdf\\' => array($baseDir . '/src'),
+    'BreakdanceFormPdf\\' => array($baseDir . '/src'),
 );

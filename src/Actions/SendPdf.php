@@ -1,9 +1,9 @@
 <?php
 
-namespace CristalWindows\BreakdanceFormPdf\Actions;
+namespace BreakdanceFormPdf\Actions;
 
 use Breakdance\Forms\Actions\Action;
-use CristalWindows\BreakdanceFormPdf\PdfBuilder;
+use BreakdanceFormPdf\PdfBuilder;
 
 use function Breakdance\Elements\control;
 use function Breakdance\Elements\controlSection;
@@ -25,7 +25,7 @@ if (!defined('ABSPATH')) {
  * The integration mirrors the production Breakdance Forms Action API: static
  * name()/slug(), a controls() method that builds the Form Builder UI, and a
  * run($form, $settings, $extra) method. Everything is configured in the UI —
- * no field ids are hardcoded.
+ * no field ids or branding are hardcoded.
  */
 class SendPdf extends Action
 {
@@ -42,7 +42,7 @@ class SendPdf extends Action
      */
     public static function slug()
     {
-        return 'cristal_send_pdf';
+        return 'breakdance_form_pdf';
     }
 
     /**
@@ -158,7 +158,7 @@ class SendPdf extends Action
                 control('document_title', 'PDF Title', [
                     'type'            => 'text',
                     'layout'          => 'vertical',
-                    'placeholder'     => 'Contact Form Submission',
+                    'placeholder'     => 'Form Submission',
                     'description'     => 'Heading shown at the top of the PDF. Supports field variables.',
                     'variableOptions' => $fieldVariableOptions,
                 ]),
@@ -207,6 +207,28 @@ class SendPdf extends Action
                     'layout' => 'inline',
                 ]),
             ]),
+
+            controlSection('pdf_appearance', 'PDF Appearance', [
+                control('logo_url', 'Logo URL', [
+                    'type'        => 'text',
+                    'layout'      => 'vertical',
+                    'placeholder' => 'https://example.com/logo.png',
+                    'description' => 'Optional logo shown in the PDF header. Leave blank to show the site name instead.',
+                ]),
+                control('brand_colour', 'Brand Colour', [
+                    'type'        => 'text',
+                    'layout'      => 'vertical',
+                    'placeholder' => '#2271b1',
+                    'description' => 'Hex colour for the header rule and title.',
+                ]),
+                control('footer_text', 'Footer Text', [
+                    'type'            => 'text',
+                    'layout'          => 'vertical',
+                    'placeholder'     => 'Leave blank to use the site name',
+                    'description'     => 'Optional footer line. Supports field variables.',
+                    'variableOptions' => $fieldVariableOptions,
+                ]),
+            ]),
         ];
     }
 
@@ -251,15 +273,23 @@ class SendPdf extends Action
         $titleTpl = $rulesCfg['document_title'] ?? '';
         $title    = $titleTpl !== '' ? trim(strip_tags($this->renderData($form, $titleTpl))) : '';
         if ($title === '') {
-            $title = 'Contact Form Submission';
+            $title = 'Form Submission';
         }
+
+        // PDF appearance / branding (all UI-configurable).
+        $appearance = $s['pdf_appearance'] ?? [];
+        $branding   = [
+            'logo'   => trim((string) ($appearance['logo_url'] ?? '')),
+            'colour' => trim((string) ($appearance['brand_colour'] ?? '')),
+            'footer' => $this->sanitize($form, $appearance['footer_text'] ?? ''),
+        ];
 
         // Build the PDF.
         try {
             $builder = new PdfBuilder();
-            $pdfPath = $builder->render($title, $contentHtml);
+            $pdfPath = $builder->render($title, $contentHtml, $branding);
         } catch (\Throwable $e) {
-            error_log('[Cristal Send PDF] PDF generation failed: ' . $e->getMessage());
+            error_log('[Breakdance Form PDF] PDF generation failed: ' . $e->getMessage());
             return ['type' => 'error', 'message' => 'Could not generate the PDF.'];
         }
 
@@ -275,7 +305,7 @@ class SendPdf extends Action
 
         $bodyTpl = ($email['body_message'] ?? '') !== ''
             ? $email['body_message']
-            : '<p>A new contact form submission has been received. Full details are attached as a PDF.</p>';
+            : '<p>A new form submission has been received. Full details are attached as a PDF.</p>';
         $body = $this->renderData($form, $bodyTpl, true);
 
         $headers = [

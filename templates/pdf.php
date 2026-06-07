@@ -4,11 +4,14 @@
  *
  * Available variables (set in PdfBuilder::buildHtml):
  *
- * @var string $logo        Logo image URL (or local path).
+ * @var string $logo        Logo image URL (or local path), may be empty.
  * @var string $brand       Brand primary colour (hex).
  * @var string $title       Document heading.
  * @var string $content     Pre-rendered inner HTML (field tokens already resolved).
  * @var string $generatedAt Human-readable generation timestamp.
+ * @var string $siteName    WordPress site name.
+ * @var string $siteUrl     WordPress home URL.
+ * @var string $footer      Footer line (falls back to site name).
  */
 
 if (!defined('ABSPATH')) {
@@ -17,14 +20,17 @@ if (!defined('ABSPATH')) {
 
 $brandColour = htmlspecialchars($brand, ENT_QUOTES, 'UTF-8');
 $logoUrl     = htmlspecialchars($logo, ENT_QUOTES, 'UTF-8');
-$titleText   = htmlspecialchars($title !== '' ? $title : 'Contact Form Submission', ENT_QUOTES, 'UTF-8');
+$titleText   = htmlspecialchars($title !== '' ? $title : 'Form Submission', ENT_QUOTES, 'UTF-8');
 $generated   = htmlspecialchars($generatedAt, ENT_QUOTES, 'UTF-8');
+$siteNameTxt = htmlspecialchars((string) $siteName, ENT_QUOTES, 'UTF-8');
+$siteUrlTxt  = htmlspecialchars((string) $siteUrl, ENT_QUOTES, 'UTF-8');
+$footerTxt   = htmlspecialchars((string) $footer, ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title><?php echo $titleText; ?> - Cristal Windows</title>
+    <title><?php echo $titleText; ?></title>
     <style>
         body {
             font-family: 'Arial', 'Helvetica', sans-serif;
@@ -38,8 +44,9 @@ $generated   = htmlspecialchars($generatedAt, ENT_QUOTES, 'UTF-8');
             margin-bottom: 20px;
             width: 100%;
         }
-        .header-logo { width: 130px; vertical-align: bottom; }
-        .header-logo img { width: 130px; height: auto; }
+        .header-brand { vertical-align: bottom; }
+        .header-brand img { width: 130px; height: auto; }
+        .header-brand .site-name { font-size: 16px; font-weight: bold; color: #222; }
         .header-contact {
             text-align: right;
             font-size: 11px;
@@ -67,12 +74,15 @@ $generated   = htmlspecialchars($generatedAt, ENT_QUOTES, 'UTF-8');
 <body>
     <table class="header">
         <tr>
-            <td class="header-logo">
-                <img src="<?php echo $logoUrl; ?>" alt="Cristal Windows">
+            <td class="header-brand">
+                <?php if ($logoUrl !== '') : ?>
+                    <img src="<?php echo $logoUrl; ?>" alt="<?php echo $siteNameTxt; ?>">
+                <?php elseif ($siteNameTxt !== '') : ?>
+                    <span class="site-name"><?php echo $siteNameTxt; ?></span>
+                <?php endif; ?>
             </td>
             <td class="header-contact">
-                www.cristalwindows.co.uk<br>
-                01252 810777 | sales@cristalwindows.co.uk
+                <?php if ($siteUrlTxt !== '') : ?><?php echo $siteUrlTxt; ?><?php endif; ?>
             </td>
         </tr>
     </table>
@@ -84,8 +94,8 @@ $generated   = htmlspecialchars($generatedAt, ENT_QUOTES, 'UTF-8');
         <?php echo $content; // resolved field content from the action layer ?>
     </div>
 
-    <div class="footer">
-        Cristal Windows, Doors &amp; Conservatories Ltd &middot; This document was generated automatically from the website contact form.
-    </div>
+    <?php if ($footerTxt !== '') : ?>
+    <div class="footer"><?php echo $footerTxt; ?></div>
+    <?php endif; ?>
 </body>
 </html>
